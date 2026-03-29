@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Manrope } from "next/font/google";
 import "./globals.css";
 
@@ -15,6 +15,13 @@ const manrope = Manrope({
 export const metadata: Metadata = {
   title: "Volume",
   description: "Music discovery app",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",      // fills the notch / Dynamic Island area
+  themeColor: "#000000",
 };
 
 export default function RootLayout({

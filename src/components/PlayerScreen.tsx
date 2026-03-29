@@ -25,70 +25,79 @@ function analyzeAudio(audioBuffer: AudioBuffer): number[] {
   return bars.map((b) => Math.max(4, Math.pow(b / max, 0.6) * 44));
 }
 
-export default function PlayerScreen() {
+export default function PlayerScreen({ onPlayStateChange, onTimeUpdate, toggleRef, seekRef }: { onPlayStateChange?: (playing: boolean) => void; onTimeUpdate?: (time: number) => void; toggleRef?: React.MutableRefObject<() => void>; seekRef?: React.MutableRefObject<(time: number) => void> }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [bars, setBars] = useState<number[]>([]);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const animRef = useRef<number>(0);
 
   useEffect(() => {
-    const audio = new Audio("/default-track.mp3");
-    audioRef.current = audio;
-
-    audio.addEventListener("loadedmetadata", () => {
-      setDuration(audio.duration);
-    });
-
     const audioContext = new AudioContext();
-    fetch("/default-track.mp3")
+    fetch("/LUNGU BOY THE EXPERIENCE.mp4")
       .then((res) => res.arrayBuffer())
       .then((buf) => audioContext.decodeAudioData(buf))
       .then((decoded) => {
+        setDuration(decoded.duration);
         setBars(analyzeAudio(decoded));
       });
 
     return () => {
-      audio.pause();
       cancelAnimationFrame(animRef.current);
       audioContext.close();
     };
   }, []);
 
   const updateProgress = useCallback(() => {
-    const audio = audioRef.current;
-    if (audio) {
-      setCurrentTime(audio.currentTime);
-      setProgress(audio.duration ? audio.currentTime / audio.duration : 0);
+    const video = videoRef.current;
+    if (video) {
+      setCurrentTime(video.currentTime);
+      setProgress(video.duration ? video.currentTime / video.duration : 0);
+      onTimeUpdate?.(video.currentTime);
     }
     animRef.current = requestAnimationFrame(updateProgress);
-  }, []);
+  }, [onTimeUpdate]);
 
   const togglePlay = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
+    const video = videoRef.current;
+    if (!video) return;
 
     if (isPlaying) {
-      audio.pause();
+      video.pause();
       cancelAnimationFrame(animRef.current);
     } else {
-      audio.play();
+      video.play();
       animRef.current = requestAnimationFrame(updateProgress);
     }
     setIsPlaying(!isPlaying);
-  }, [isPlaying, updateProgress]);
+    onPlayStateChange?.(!isPlaying);
+  }, [isPlaying, updateProgress, onPlayStateChange]);
+
+  // Expose togglePlay via ref pour les composants frères
+  useEffect(() => {
+    if (toggleRef) toggleRef.current = togglePlay;
+  }, [togglePlay, toggleRef]);
+
+  // Expose seek via ref
+  useEffect(() => {
+    if (seekRef) seekRef.current = (time: number) => {
+      const video = videoRef.current;
+      if (!video) return;
+      video.currentTime = time;
+      setCurrentTime(time);
+      setProgress(video.duration ? time / video.duration : 0);
+      onTimeUpdate?.(time);
+    };
+  }, [seekRef]);
 
   const skip = useCallback((seconds: number) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.currentTime = Math.max(
-      0,
-      Math.min(audio.duration, audio.currentTime + seconds)
-    );
-    setCurrentTime(audio.currentTime);
-    setProgress(audio.duration ? audio.currentTime / audio.duration : 0);
+    const video = videoRef.current;
+    if (!video) return;
+    video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + seconds));
+    setCurrentTime(video.currentTime);
+    setProgress(video.duration ? video.currentTime / video.duration : 0);
   }, []);
 
   const formatTime = (s: number) => {
@@ -101,90 +110,122 @@ export default function PlayerScreen() {
   };
 
   return (
-    <div className="relative h-full flex flex-col bg-black">
-      {/* Cover Image + Header + Artist Info */}
-      <div className="relative w-full aspect-[4/3]">
-        <img
-          src="https://i.scdn.co/image/ab67616d0000b273e3a09e6b4e4c1f8a1f7e8a5c"
-          alt="Kaaris Zoo"
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-black/30" />
+    <main className="relative h-full flex flex-col bg-black screen-entry">
 
-        {/* Header */}
-        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 pt-12 pb-2 z-10">
-          <div className="flex items-center gap-0">
-            <span
-              className="text-white text-lg tracking-tight"
-              style={{ fontFamily: "var(--font-manrope)", fontWeight: 700 }}
-            >
-              vol
-            </span>
-            <span
-              className="text-red-500 text-lg"
-              style={{ fontFamily: "var(--font-manrope)", fontWeight: 700 }}
-            >
-              |
-            </span>
-            <span
-              className="text-white text-lg tracking-tight"
-              style={{ fontFamily: "var(--font-manrope)", fontWeight: 700 }}
-            >
-              me
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
+      {/* ── Cover ── */}
+      <section className="relative w-full h-[70%] shrink-0 overflow-hidden">
+        <video
+          ref={videoRef}
+          src="/LUNGU BOY THE EXPERIENCE.mp4"
+          className="w-full h-full object-cover z-0 hero-video"
+          loop
+          playsInline
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent z-10" />
+
+        <header
+          className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 pb-2 z-20"
+          style={{ paddingTop: "max(3rem, env(safe-area-inset-top))" }}
+        >
+          <img src="/icons/Logo.svg" alt="Volume" width={72} height={24} />
+          <nav className="flex items-center gap-4">
             <button className="text-white">
               <img src="/icons/bookmark.svg" alt="Bookmark" width={22} height={22} />
             </button>
             <button className="text-white">
-              <img src="/icons/arrow.down.svg" alt="Download" width={22} height={22} />
+              <img src="/icons/more_horiz.svg" alt="More" width={22} height={22} />
             </button>
+          </nav>
+        </header>
+
+        <div className="absolute bottom-0 left-0 right-0 px-6 pb-5 z-20">
+
+          <div className="flex items-end justify-between">
+            {/* Gauche : titre + sous-titre */}
+            <div>
+              <h1
+                className="text-white text-[32px] leading-tight"
+                style={{ fontFamily: "var(--font-manrope)", fontWeight: 700 }}
+              >
+                Asake
+              </h1>
+              <span
+                className="text-gray-300 text-sm"
+                style={{ fontFamily: "var(--font-inter)" }}
+              >
+                Lungu Boy
+              </span>
+            </div>
+
+            {/* Droite : CD + Cover au dessus de 48:28 */}
+            <div className="flex flex-col items-end gap-3">
+              <div className="relative w-[44px] h-[44px] shrink-0">
+                {/* Wrapper : gère uniquement la translation */}
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    transform: isPlaying ? "translateX(-18px)" : "translateX(0px)",
+                    transition: "transform 0.5s ease",
+                  }}
+                >
+                  {/* Image : gère uniquement la rotation */}
+                  <img
+                    src="/CD.png"
+                    alt="CD"
+                    width={44}
+                    height={44}
+                    className={`rounded-full w-full h-full ${isPlaying ? "cd-spinning" : ""}`}
+                  />
+                </div>
+                <img
+                  src="/Cover.png"
+                  alt="Cover"
+                  width={44}
+                  height={44}
+                  className="absolute inset-0 rounded-md"
+                />
+              </div>
+              <span
+                className="text-gray-300 text-sm tabular-nums"
+                style={{ fontFamily: "var(--font-inter)" }}
+              >
+                48:28
+              </span>
+            </div>
           </div>
         </div>
+      </section>
 
-        {/* Artist Info overlaid on image */}
-        <div className="absolute bottom-0 left-0 right-0 px-6 pb-5 z-10">
-          <h1
-            className="text-white text-[32px] leading-tight"
-            style={{ fontFamily: "var(--font-manrope)", fontWeight: 700 }}
-          >
-            Kaaris
-          </h1>
-          <div className="flex items-center justify-between mt-1">
-            <span
-              className="text-gray-300 text-sm"
-              style={{ fontFamily: "var(--font-inter)" }}
-            >
-              Zoo
-            </span>
-            <span
-              className="text-gray-300 text-sm tabular-nums"
-              style={{ fontFamily: "var(--font-inter)" }}
-            >
-              {formatTime(duration)}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Time Indicator */}
-      <div className="flex justify-center mt-5">
+      {/* ── Current time badge ── */}
+      <div className="flex flex-col items-center mt-2">
         <span
           className="bg-red-600 text-white text-xs font-semibold px-3 py-1 rounded-full tabular-nums"
           style={{ fontFamily: "var(--font-inter)" }}
         >
           {formatTime(currentTime)}
         </span>
+        {/* Caret pointant vers la waveform */}
+        <div
+          style={{
+            width: 0,
+            height: 0,
+            borderLeft: "5px solid transparent",
+            borderRight: "5px solid transparent",
+            borderTop: "5px solid #dc2626",
+          }}
+        />
       </div>
 
-      {/* Waveform */}
-      <div className="mt-3 px-2">
+      {/* ── Waveform ── */}
+      <section className="mt-1 px-2">
         <Waveform bars={bars} progress={progress} />
-      </div>
+      </section>
 
-      {/* Controls */}
-      <div className="flex items-center justify-center gap-10 mt-6 px-6">
+      {/* ── Playback controls ── */}
+      <nav
+        className="flex items-center justify-center gap-10 mt-9 px-6"
+        style={{ marginBottom: "max(2.5rem, env(safe-area-inset-bottom))" }}
+      >
         <button onClick={() => skip(-15)} className="active:opacity-60">
           <img
             src="/icons/15.arrow.trianglehead.counterclockwise.svg"
@@ -196,12 +237,17 @@ export default function PlayerScreen() {
 
         <button
           onClick={togglePlay}
-          className="w-16 h-16 rounded-full border-2 border-white/30 flex items-center justify-center active:opacity-60"
+          className="active:opacity-60"
         >
           {isPlaying ? (
-            <img src="/icons/pause.svg" alt="Pause" width={28} height={28} />
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="white">
+              <rect x="6" y="4" width="4" height="16" />
+              <rect x="14" y="4" width="4" height="16" />
+            </svg>
           ) : (
-            <img src="/icons/play.fill.svg" alt="Play" width={28} height={28} />
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="white">
+              <polygon points="8,4 20,12 8,20" />
+            </svg>
           )}
         </button>
 
@@ -213,23 +259,11 @@ export default function PlayerScreen() {
             height={28}
           />
         </button>
-      </div>
+      </nav>
 
-      {/* Swipe hint */}
-      <div className="flex justify-center mt-auto mb-8">
-        <div className="flex flex-col items-center gap-1 animate-pulse">
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="rgba(255,255,255,0.3)"
-            strokeWidth="2"
-          >
-            <path d="M18 15l-6-6-6 6" />
-          </svg>
-        </div>
-      </div>
-    </div>
+      {/* Bottom gradient — scroll affordance, no explicit UI */}
+      <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black via-black/60 to-transparent pointer-events-none z-10" />
+
+    </main>
   );
 }
