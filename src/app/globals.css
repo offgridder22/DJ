@@ -40,7 +40,7 @@ body {
 }
 
 .cd-spinning {
-  animation: cdSpin 3s linear infinite;
+  animation: cdSpin 2.2s linear infinite;
 }
 
 /* Micro entry — léger shift vertical au montage, imperceptible */

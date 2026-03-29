@@ -117,7 +117,7 @@ export default function PlayerScreen({ onPlayStateChange, onTimeUpdate, toggleRe
         <video
           ref={videoRef}
           src="/LUNGU BOY THE EXPERIENCE.mp4"
-          className="w-full h-full object-cover z-0 hero-video"
+          className={`w-full h-full object-cover z-0 ${isPlaying ? "hero-video" : ""}`}
           loop
           playsInline
         />
@@ -157,36 +157,47 @@ export default function PlayerScreen({ onPlayStateChange, onTimeUpdate, toggleRe
               </span>
             </div>
 
-            {/* Droite : CD + Cover au dessus de 48:28 */}
-            <div className="flex flex-col items-end gap-3">
-              <div className="relative w-[44px] h-[44px] shrink-0">
-                {/* Wrapper : gère uniquement la translation */}
+            {/* Droite : CD + Cover */}
+            <div className="flex flex-col items-end gap-2">
+              <div className="relative w-[48px] h-[48px] shrink-0">
+
+                {/* CD — translation seule */}
                 <div
                   className="absolute inset-0"
                   style={{
-                    transform: isPlaying ? "translateX(-18px)" : "translateX(0px)",
-                    transition: "transform 0.5s ease",
+                    transform: isPlaying ? "translateX(-26px)" : "translateX(0px)",
+                    transition: "transform 0.6s cubic-bezier(0.34, 1.4, 0.64, 1)",
                   }}
                 >
-                  {/* Image : gère uniquement la rotation */}
                   <img
                     src="/CD.png"
                     alt="CD"
-                    width={44}
-                    height={44}
+                    width={48}
+                    height={48}
                     className={`rounded-full w-full h-full ${isPlaying ? "cd-spinning" : ""}`}
+                    style={{ filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.7))" }}
                   />
                 </div>
+
+                {/* Cover — au premier plan */}
                 <img
                   src="/Cover.png"
                   alt="Cover"
-                  width={44}
-                  height={44}
+                  width={48}
+                  height={48}
                   className="absolute inset-0 rounded-md"
+                  style={{
+                    filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.6))",
+                    boxShadow: isPlaying
+                      ? "0 0 0 1.5px rgba(255,255,255,0.18)"
+                      : "0 0 0 1.5px rgba(255,255,255,0.06)",
+                    transition: "box-shadow 0.6s ease",
+                  }}
                 />
               </div>
+
               <span
-                className="text-gray-300 text-sm tabular-nums"
+                className="text-white/40 text-xs tabular-nums"
                 style={{ fontFamily: "var(--font-inter)" }}
               >
                 48:28
